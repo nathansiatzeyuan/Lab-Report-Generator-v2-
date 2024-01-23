@@ -1,0 +1,129 @@
+# import libraries
+from PyPDF2 import PdfFileReader
+from PIL import Image
+import base64
+import io
+
+
+
+def rename_input(inputs):
+    # Rename the input for the 'Lab Report Outline Generator' API
+    outputs = {
+        "lab_handout": inputs["lab_report_pdf"]
+    }
+
+    return outputs
+
+# Using PyPDF API to convert the pdf into a readable text format
+
+def prepare_inputs_for_report_generation(inputs):
+    # Load the PDF file
+    with open(inputs["lab_report_pdf"], "rb") as file:
+        pdf = PdfFileReader(file)
+        lab_report_pdf_content = "\n".join(page.extract_text() for page in pdf.pages)
+
+    # Load the image file and convert it to base64 string
+    with Image.open(inputs["lab_data_image"]) as img:
+        # Convert the image to RGB mode
+        img = img.convert("RGB")
+
+        buffered = io.BytesIO()
+        img.save(buffered, format="JPEG")
+        img_byte = buffered.getvalue()
+        lab_data_image_content = base64.b64encode(img_byte).decode()
+
+    # Prepare the inputs for the 'GPT-based AI' API
+    outputs = {
+        "prepared_inputs": {
+            "lab_report_pdf_content": lab_report_pdf_content,
+            "author_details": inputs["author_details"],
+            "lab_data_image_content": lab_data_image_content,
+            "page_limit": inputs["page_limit"],
+            "additional_requirements": inputs["additional_requirements"],
+            "report_section_sequence": inputs["report_section_sequence"],
+            "table_columns_meaning": inputs["table_columns_meaning"]
+        }
+    }
+
+    return outputs
+
+# Use GPT AI Based API to summarise and generate lab report with the inputs above
+
+def prepare_image_input(inputs):
+    # Prepare the inputs for the 'Blip-2: Answers questions about images' API
+    outputs = {
+        "image": inputs["lab_data_image"],
+        "question": ""
+    }
+
+    return outputs
+
+#Blip-2 is a model that answers questions about images. To use it, provide an image, and then ask a question about that image.
+For example, you can provide the an image and then pose the following question: What is this a picture of? and get the output: marina bay sands, singapore. 
+Blip-2 is also capable of captioning images. This works by sending the model a blank prompt. Preferably use GPT-based AI or LLaVA as they better at Vision Understanding.
+
+def prepare_image_output(inputs):
+    # Prepare the outputs dictionary
+    outputs = {
+        "image_interpretation": inputs["blip_anwser_output"]
+    }
+
+    return outputs
+# Use GPT to analyse the Blip-2 output
+
+#Format into latex_report
+def format_latex_report(inputs):
+    # Get the inputs
+    author_details = inputs["author_details"]
+    lab_summary = inputs["lab_summary"]
+    discussion_questions = inputs["discussion_questions"]
+    prepared_inputs = inputs["prepared_inputs"]
+    image_interpretation = inputs["image_interpretation"]
+    table_interpretation = inputs["table_interpretation"]
+    
+    # Start of the LaTeX document
+    latex_report = "\\documentclass{article}\n"
+    latex_report += "\\title{Lab Report}\n"
+    latex_report += "\\author{" + author_details + "}\n"
+    latex_report += "\\begin{document}\n"
+    latex_report += "\\maketitle\n"
+    
+    # Add the lab summary
+    latex_report += "\\section{Introduction}\n"
+    latex_report += lab_summary + "\n"
+    
+    # Add the discussion questions
+    latex_report += "\\section{Discussion}\n"
+    latex_report += discussion_questions + "\n"
+    
+    # Add the image interpretation
+    latex_report += "\\section{Image Interpretation}\n"
+    latex_report += image_interpretation + "\n"
+    
+    # Add the table interpretation
+    latex_report += "\\section{Table Interpretation}\n"
+    latex_report += table_interpretation + "\n"
+    
+    # Add any additional requirements
+    if "additional_requirements" in prepared_inputs:
+        latex_report += "\\section{Additional Requirements}\n"
+        latex_report += prepared_inputs["additional_requirements"] + "\n"
+    
+    # End of the LaTeX document
+    latex_report += "\\end{document}"
+    
+    # Convert the page limit to an integer
+    page_limit = int(prepared_inputs["page_limit"])
+    
+    # Check if the latex report exceeds the page limit
+    estimated_pages = len(latex_report) // 500  # Assume that one page contains approximately 500 characters
+    if estimated_pages > page_limit:
+        # If the document exceeds the page limit, trim the contents accordingly
+        # This is a simple way to do it, by cutting off the end of the string.
+        # A more sophisticated approach might involve reducing the contents in a more meaningful way (e.g., shortening the text, reducing images, etc.)
+        latex_report = latex_report[:page_limit * 500]
+    
+    # Prepare the output dictionary
+    outputs = {"latex_lab_report": latex_report}
+
+    return outputs
