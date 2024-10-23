@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart'; // Import for Clipboard functionality
 
 void main() {
   runApp(const MyApp());
@@ -35,16 +36,14 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // State variables for user inputs
   File? _labReportFile;
   int? _pageLimit;
   List<String> _selectedSections = [];
   File? _imageFile;
+  String _responseData = '';  // New variable to store the response data
 
-  // List of sections
   final List<String> sections = ['Introduction', 'Methods', 'Results'];
 
-  // Method to pick lab report PDF file
   Future<void> _pickLabReport() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -58,7 +57,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // Method to pick image file
   Future<void> _pickImage() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.image,
@@ -71,7 +69,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // Method to handle form submission (send data to the backend)
   Future<void> _submitData() async {
     if (_labReportFile != null && _pageLimit != null && _selectedSections.isNotEmpty) {
       try {
@@ -100,9 +97,12 @@ class _MyHomePageState extends State<MyHomePage> {
         // Send the request to the server
         var response = await request.send();
 
+        // Read the response once
         if (response.statusCode == 200) {
           var responseData = await response.stream.bytesToString();
-          print('Success! Response: $responseData');
+          setState(() {
+            _responseData = jsonDecode(responseData)["lab_report"]; // Store response data
+          });
         } else {
           print('Failed to submit data. Status code: ${response.statusCode}');
         }
@@ -114,19 +114,25 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _copyToClipboard() {
+    Clipboard.setData(ClipboardData(text: _responseData)).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report copied to clipboard!')),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: const Text('Lab Report Generator'),
       ),
-      body: Padding(
+      body: SingleChildScrollView( // Use SingleChildScrollView for the whole body
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Button to upload lab report
             ElevatedButton(
               onPressed: _pickLabReport,
               child: const Text('Upload Lab Report (PDF)'),
@@ -138,7 +144,6 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             const SizedBox(height: 16),
 
-            // Input for page limit
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Specify Page Limit',
@@ -153,7 +158,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 16),
 
-            // Dropdown to select sections
             const Text('Select Sections Needed:'),
             Wrap(
               spacing: 8.0,
@@ -175,7 +179,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 16),
 
-            // Button to upload image
             ElevatedButton(
               onPressed: _pickImage,
               child: const Text('Upload Image (Readings/Values)'),
@@ -187,13 +190,43 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             const SizedBox(height: 16),
 
-            // Generate button to submit data
             Center(
               child: ElevatedButton(
                 onPressed: _submitData,
                 child: const Text('Generate Lab Report'),
               ),
             ),
+            const SizedBox(height: 16),
+           // Display the generated report if available
+            if (_responseData.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Generated Lab Report:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                constraints: const BoxConstraints(
+                  maxHeight: 300, // Set a maximum height for the container
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey), // Optional: Add a border for visibility
+                  borderRadius: BorderRadius.circular(8), // Optional: Rounded corners
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Text(
+                    _responseData,
+                    style: const TextStyle(fontFamily: 'Courier', fontSize: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _copyToClipboard,
+                child: const Text('Copy Text'),
+              ),
+            ],
           ],
         ),
       ),
