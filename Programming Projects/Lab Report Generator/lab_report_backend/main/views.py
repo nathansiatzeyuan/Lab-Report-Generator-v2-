@@ -2,41 +2,47 @@ import json
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.response import Response
 from django.core.files.storage import default_storage
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+
 from .utils import read_pdf, GPT_return_text
+from .models import LabReport, Question, Section
+from .serializers import UploadLabHandoutSerializer
 
 
-@csrf_exempt
-def lab_report_view(request):
-    if request.method == 'POST':
+class ExtractLabHandoutTextViewSet(viewsets.ModelViewSet):
+    queryset = LabReport.objects.all()
+    serializer_class = UploadLabHandoutSerializer
+
+    @action(detail=False, methods=['post'], url_path='upload', url_name='upload')
+    def upload_lab_handout(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        
+        if not file:
+            return JsonResponse({"error": "File not provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save LabReport instance
+        lab_report = LabReport(file=file)
+        lab_report.save()
+
+        # Extract text from the PDF file
+        extracted_text = ""
         try:
-            # Retrieve the uploaded PDF file
-            if 'pdf' in request.FILES:
-                pdf_file = request.FILES['pdf']
-                handout_text = read_pdf(pdf_file)
-                # pdf_path = default_storage.save(f'uploads/{pdf_file.name}', pdf_file)
+            extracted_text = read_pdf(file)
+            lab_report.number_of_pages = request.get('number_of_pages')
+            lab_report.extracted_text = extracted_text
 
-            # Retrieve the uploaded image file (if provided)
-            # if 'image' in request.FILES:
-            #     image_file = request.FILES['image']
-            #     image_path = default_storage.save(f'uploads/{image_file.name}', image_file)
-            # else:
-            #     image_path = None
+            # Handle sections if provided
+            sections_data = request.data.get('sections')
+            if sections_data:
+                for section_text in sections_data:
+                    Section.objects.create(lab_report=lab_report, text=section_text)
 
-            # Extract other form data (page_limit and selected sections)
-            page_limit = request.POST.get('page_limit')
-            sections_needed = request.POST.get('sections_needed')
-            # Convert sections_needed from JSON string to a Python object
-            selected_sections = json.loads(sections_needed) if sections_needed else []
-            question = f"Generarte a Latex format lab report. The lab_handout text is here: {handout_text}. The sections needed in the lab_report are {selected_sections} with page limit {page_limit}"
-            latex_lab_report = GPT_return_text(question)
-            # if image_path:
-            #     print(f"Image saved to: {image_path}")
-
-            # Respond with a success message
-            return JsonResponse({'lab_report': f'{latex_lab_report}'})
-
+            lab_report.save()
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
+            return JsonResponse({"error": f"Failed to process file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+        serializer = self.get_serializer(lab_report)
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
