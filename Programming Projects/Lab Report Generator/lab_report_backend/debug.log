@@ -1,0 +1,5 @@
+INFO 2024-11-04 21:40:45,515 autoreload Watching for file changes with StatReloader
+WARNING 2024-11-04 21:41:07,236 log Bad Request: /extract_text/
+INFO 2024-11-04 21:43:46,738 autoreload C:\Users\Dell\Programming Projects\Lab Report Generator\lab_report_backend\main\views.py changed, reloading.
+INFO 2024-11-04 21:43:48,250 autoreload Watching for file changes with StatReloader
+INFO 2024-11-04 21:45:07,668 autoreload C:\Users\Dell\Programming Projects\Lab Report Generator\lab_report_backend\lab_report_backend\settings.py changed, reloading.
