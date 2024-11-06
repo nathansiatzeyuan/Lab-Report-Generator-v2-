@@ -45,9 +45,9 @@ class ExtractLabHandoutTextViewSet(viewsets.ModelViewSet):
             questions = GPT_return_text(f'The lab handout text is {extracted_text}. What are the questions the lab wants us to answer? Return in the format ["Question1", "Question2","Question3", etc.]')
             start = questions.index("[")
             questions = questions[start:]
-            print("Hello")
             if questions:
                 questions = json.loads(questions)
+                print("Success")
                 for question in questions:
                     Question.objects.create(lab_report=lab_report, question_text=question)
 

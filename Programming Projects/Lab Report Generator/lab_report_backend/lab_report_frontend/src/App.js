@@ -35,9 +35,18 @@ function App() {
   const [fileInputs, setFileInputs] = useState({});
   const [textInputs, setTextInputs] = useState({});
 
-  const handleReadingFileChange = (id, e) => {
-    const file = e.target.files[0];
-    setFileInputs((prev) => ({ ...prev, [id]: file }));
+  const handleAnswerFileChange = (key, event) => {
+    // Handle the file change logic here
+    const file = event.target.files[0];
+    // You might want to store the file based on the key (which includes section or question id)
+    console.log(key, file);  // Just for debugging purposes
+  };  
+
+  const handleAnswerTextChange = (key, event) => {
+    setTextInputs({
+      ...textInputs,
+      [key]: event.target.value,  // Update the value for the specific section or question
+    });
   };
 
   const handleTextChange = (id, e) => {
@@ -105,7 +114,6 @@ function App() {
       }
 
       // Set the sections and questions from the API response
-      console.log(data.sections)
       setSections(data.sections);
       setQuestions(data.questions);
 
@@ -216,33 +224,57 @@ function App() {
 
         {/* Second Part: Sections and Questions Display */}
         {sections.length > 0 && questions.length > 0 && (
-          <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Generated Sections and Questions</h2>
-            <div className="space-y-4">
-              {sections.map((section, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-4">
-                  <h3 className="text-lg font-semibold">{section.title}</h3>
-                  <div>
-                    {Array.isArray(questions[index]) && questions[index].length > 0 ? (
-                      questions[index].map((question, qIndex) => (
-                        <div key={qIndex} className="flex justify-between">
-                          <span>{question}</span>
-                          <input
-                            type="text"
-                            value={textInputs[`${section.id}-${qIndex}`] || ''}
-                            onChange={(e) => handleTextChange(`${section.id}-${qIndex}`, e)}
-                            placeholder="Your answer here..."
-                            className="mt-1 block w-3/4 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
-                          />
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-600">No questions available for this section.</p>
-                    )}
-                  </div>
+        <div className="mt-8 p-6 bg-white rounded-lg shadow-md">
+          <h2 className="text-xl font-bold mb-4 text-gray-800">Generated Sections and Questions</h2>
+          <div className="space-y-4">
+            {/* Loop through each section */}
+            {sections.map((section) => (
+              <div key={section.id} className="border border-gray-200 rounded-md p-4 mb-4">
+                <h4 className="text-md font-medium">{section.section}</h4> {/* Display section.text */}
+                <div className="flex flex-col space-y-4">
+                  {/* Answer Text Input for section */}
+                  <input
+                    type="text"
+                    value={textInputs[`section-${section.id}-text`] || ''} // Use section.id as part of the key
+                    onChange={(e) => handleAnswerTextChange(`section-${section.id}-text`, e)} // Handle changes based on section.id
+                    placeholder="Your answer here..."
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                  />
+
+                  {/* File Upload Input for section */}
+                  <input
+                    type="file"
+                    onChange={(e) => handleAnswerFileChange(`section-${section.id}-file`, e)} // Use section.id to identify file change
+                    className="mt-1 block w-full text-sm text-gray-500"
+                  />
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+
+            {/* Loop through each question */}
+            {questions.map((question) => (
+              <div key={question.id} className="border border-gray-200 rounded-md p-4 mb-4">
+                <h4 className="text-md font-medium">{question.question_text}</h4> {/* Display question.text */}
+                <div className="flex flex-col space-y-4">
+                  {/* Answer Text Input for question */}
+                  <input
+                    type="text"
+                    value={textInputs[`question-${question.id}-text`] || ''} // Use question.id as part of the key
+                    onChange={(e) => handleAnswerTextChange(`question-${question.id}-text`, e)} // Handle changes based on question.id
+                    placeholder="Your answer here..."
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
+                  />
+
+                  {/* File Upload Input for question */}
+                  <input
+                    type="file"
+                    onChange={(e) => handleAnswerFileChange(`question-${question.id}-file`, e)} // Use question.id to identify file change
+                    className="mt-1 block w-full text-sm text-gray-500"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
           </div>
         )}
       </div>
