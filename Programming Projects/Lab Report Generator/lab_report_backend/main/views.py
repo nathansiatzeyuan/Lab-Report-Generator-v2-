@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 
 from .utils import read_pdf, GPT_return_text
 from .models import LabReport, Question, Section
-from .serializers import UploadLabHandoutSerializer, UploadAnswertoSectionSerializer, UploadAnswertoSectionSerializer, SectionSerializer
+from .serializers import UploadLabHandoutSerializer, UploadAnswertoSectionSerializer, UploadAnswertoSectionSerializer, SectionSerializer, QuestionSerializer
 
 
 class ExtractLabHandoutTextViewSet(viewsets.ModelViewSet):
@@ -90,5 +90,40 @@ class GenerateSectionViewSet(viewsets.ModelViewSet):
             return JsonResponse({"error": "Section not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({"error": f"Failed to generate text: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return JsonResponse(response_data, status=status.HTTP_200_OK)
+
+
+#URL: /<id>/generate_question_text/
+class GenerateQuestionViewSet(viewsets.ModelViewSet):
+    queryset = Question.objects.all()
+
+    @action(detail=True, methods=['put', 'patch'])
+    def generate_question_text(self, request, pk=None):
+        text = request.data.get('answer')
+
+        try:
+            # Retrieve the Section instance by its primary key (pk)
+            question = self.get_object()
+            # Extract additional details for processing
+            question_text = question.question_text
+            lab_report = question.lab_report
+            extracted_text = lab_report.extracted_text
+
+            # Generate refined text using GPT (assuming GPT_return_text is defined)
+            answer = GPT_return_text(
+                f"The lab handout text is {extracted_text}. Now I want to answer the question:{question_text} of the lab report. "
+                f"This is some of my ideas but very incomplete: {text}. Can you provide me an answer?"
+            )
+            question.answer = answer
+            question.save()
+
+            # Serialize and return the updated section data
+            response_data = QuestionSerializer(question).data
+
+        except Question.DoesNotExist:
+            return JsonResponse({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to generate answer: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return JsonResponse(response_data, status=status.HTTP_200_OK)
