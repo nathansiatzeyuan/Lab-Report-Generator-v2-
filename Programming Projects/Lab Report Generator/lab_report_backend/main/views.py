@@ -10,14 +10,14 @@ from rest_framework.decorators import action
 
 from .utils import read_pdf, GPT_return_text
 from .models import LabReport, Question, Section
-from .serializers import UploadLabHandoutSerializer
+from .serializers import UploadLabHandoutSerializer, UploadAnswertoSectionSerializer, UploadAnswertoSectionSerializer, SectionSerializer
 
 
 class ExtractLabHandoutTextViewSet(viewsets.ModelViewSet):
     queryset = LabReport.objects.all()
     serializer_class = UploadLabHandoutSerializer
 
-    @action(detail=False, methods=['post'], url_path='extract_text', url_name='upload')
+    @action(detail=False, methods=['post'])
     def upload_lab_handout(self, request, *args, **kwargs):
         file = request.FILES.get('file')
         if not file:
@@ -58,4 +58,37 @@ class ExtractLabHandoutTextViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(lab_report)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
     
+#URL: /<id>/generate_section_text/
+class GenerateSectionViewSet(viewsets.ModelViewSet):
+    queryset = Section.objects.all()
+    serializer_class = UploadAnswertoSectionSerializer
 
+    @action(detail=True, methods=['put', 'patch'])
+    def generate_section_text(self, request, pk=None):
+        text = request.data.get('text')
+
+        try:
+            # Retrieve the Section instance by its primary key (pk)
+            section = self.get_object()
+            # Extract additional details for processing
+            title = section.section
+            lab_report = section.lab_report
+            extracted_text = lab_report.extracted_text
+
+            # Generate refined text using GPT (assuming GPT_return_text is defined)
+            answer = GPT_return_text(
+                f"The lab handout text is {extracted_text}. Now I want to write the {title} of the lab report. "
+                f"This is some of my ideas but very incomplete: {text}. Can you help me generate a refined version of {title}?"
+            )
+            section.text = answer
+            section.save()
+
+            # Serialize and return the updated section data
+            response_data = SectionSerializer(section).data
+
+        except Section.DoesNotExist:
+            return JsonResponse({"error": "Section not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to generate text: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return JsonResponse(response_data, status=status.HTTP_200_OK)

@@ -102,7 +102,7 @@ function App() {
     formData.append('sections', JSON.stringify(allSections));
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/extract_text/', {
+      const response = await fetch('http://127.0.0.1:8000/upload_lab_handout/', {
         method: 'POST',
         body: formData,
       });
@@ -131,6 +131,37 @@ function App() {
       setIsLoading(false);
     }
   };
+
+
+
+  const handleSectionAnswerSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    text = textInputs[`section-${section.id}-text`]
+    formData.append('text', text);
+    formData.append('section_id', section_id);
+    
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/generate_section_text/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process file');
+      }
+      textInputs[`section-${section.id}-text`] = data.
+      setSuccess('Done');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -239,13 +270,6 @@ function App() {
                     onChange={(e) => handleAnswerTextChange(`section-${section.id}-text`, e)} // Handle changes based on section.id
                     placeholder="Your answer here..."
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
-                  />
-
-                  {/* File Upload Input for section */}
-                  <input
-                    type="file"
-                    onChange={(e) => handleAnswerFileChange(`section-${section.id}-file`, e)} // Use section.id to identify file change
-                    className="mt-1 block w-full text-sm text-gray-500"
                   />
                 </div>
               </div>

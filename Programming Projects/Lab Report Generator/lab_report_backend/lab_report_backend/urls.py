@@ -17,10 +17,12 @@ Including another URLconf
 from django.urls import include, path
 from django.contrib import admin
 from rest_framework.routers import DefaultRouter
-from main.views import ExtractLabHandoutTextViewSet
+from main.views import ExtractLabHandoutTextViewSet, GenerateSectionViewSet
 
 router = DefaultRouter()
 router.register('', ExtractLabHandoutTextViewSet)
+router.register('', GenerateSectionViewSet)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls), 

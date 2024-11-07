@@ -22,3 +22,15 @@ class UploadLabHandoutSerializer(serializers.ModelSerializer):
     class Meta:
         model = LabReport
         fields = ['id', 'file', 'number_of_pages',  'sections', 'questions']
+
+
+class UploadAnswertoSectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ['id', 'text']
+
+
+class UploadAnswerImagetoQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ['id', 'question_text', 'experimental_value', 'answer'] 
